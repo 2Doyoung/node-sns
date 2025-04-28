@@ -11,6 +11,7 @@ const { sequelize } = require('./models');
 dotenv.config(); // .env 파일을 읽어 process.env로 환경변수 설정
 const pageRouter = require('./routes/page');
 const authRouter = require('./routes/auth');
+const postRouter = require('./routes/post');
 const passportConifg = require('./passport')
 
 const app = express();
@@ -22,7 +23,7 @@ nunjucks.configure('views', { // nunjucks 설정
     watch: true, // 템플릿 파일 변경 시 자동 반영
 });
 
-sequelize.sync({ force: true })
+sequelize.sync()
     .then(() => {
         console.log('데이터베이스 연결 성공');
     })
@@ -32,6 +33,7 @@ sequelize.sync({ force: true })
 
 app.use(morgan('dev')); // HTTP 요청 로깅 (개발용 dev, 배포용 combined)
 app.use(express.static(path.join(__dirname, 'public'))); // 정적 파일 제공(public 폴더)
+app.use('/img', express.static(path.join(__dirname, 'uploads'))); // 정적 파일 제공(public 폴더)
 app.use(express.json()); // JSON 데이터 파싱(req.body에 담기)
 app.use(express.urlencoded({ extended: false })); // 폼 데이터 파싱(req.body에 담기, 단순 객체만)
 app.use(cookieParser(process.env.COOKIE_SECRET)); // 쿠키 파싱 및 암호화
@@ -49,6 +51,7 @@ app.use(passport.session());
 
 app.use('/', pageRouter); // 기본 경로에 pageRouter 적용
 app.use('/auth', authRouter);
+app.use('/post', postRouter);
 
 app.use((req, res, next) => { // 404 NOT FOUND 처리 미들웨어
     const error = new Error(`${req.method} ${req.url} 라우터가 없습니다.`);
