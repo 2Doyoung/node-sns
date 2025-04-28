@@ -5,17 +5,30 @@ const path = require('path');
 const session = require('express-session');
 const nunjucks = require('nunjucks');
 const dotenv = require('dotenv');
+const passport = require('passport');
+const { sequelize } = require('./models');
 
 dotenv.config(); // .env 파일을 읽어 process.env로 환경변수 설정
 const pageRouter = require('./routes/page');
+const authRouter = require('./routes/auth');
+const passportConifg = require('./passport')
 
 const app = express();
+passportConifg();
 app.set('port', process.env.PORT || 8001); // 포트 설정 (기본 8001)
 app.set('view engine', 'html'); // 템플릿 엔진을 html로 설정 (nunjucks 사용)
 nunjucks.configure('views', { // nunjucks 설정
     express: app, // express 앱 연결
     watch: true, // 템플릿 파일 변경 시 자동 반영
 });
+
+sequelize.sync({ force: true })
+    .then(() => {
+        console.log('데이터베이스 연결 성공');
+    })
+    .catch((err) => {
+        console.error(err);
+    })
 
 app.use(morgan('dev')); // HTTP 요청 로깅 (개발용 dev, 배포용 combined)
 app.use(express.static(path.join(__dirname, 'public'))); // 정적 파일 제공(public 폴더)
@@ -31,8 +44,11 @@ app.use(session({ // 세션 설정
         secure: false, // https가 아닌 환경에서도 사용(false)
     }
 }));
+app.use(passport.initialize()); // req.user, req.login, req.isAuthenticat, req.logout
+app.use(passport.session());
 
 app.use('/', pageRouter); // 기본 경로에 pageRouter 적용
+app.use('/auth', authRouter);
 
 app.use((req, res, next) => { // 404 NOT FOUND 처리 미들웨어
     const error = new Error(`${req.method} ${req.url} 라우터가 없습니다.`);
